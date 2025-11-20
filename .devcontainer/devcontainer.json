@@ -1,0 +1,23 @@
+{
+  "name": "ARM GNU Baremetal Dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "marus25.cortex-debug",
+        "ms-vscode.cmake-tools",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "cmake.generator": "Ninja",
+        "cmake.configureOnOpen": false
+      }
+    }
+  },
+  "postCreateCommand": "arm-none-eabi-gcc --version && cmake --version"
+}
