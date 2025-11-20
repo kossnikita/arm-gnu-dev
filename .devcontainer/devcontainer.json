@@ -1,9 +1,6 @@
 {
   "name": "ARM GNU Baremetal Dev",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
+  "image": "ghcr.io/kossnikita/arm-baremetal-devcontainer:latest",
   "remoteUser": "vscode",
   "customizations": {
     "vscode": {
@@ -15,7 +12,13 @@
       ],
       "settings": {
         "cmake.generator": "Ninja",
-        "cmake.configureOnOpen": false
+        "cmake.configureOnOpen": false,
+        "files.associations": {
+          "*.h": "c",
+          "*.h.in": "c",
+          "*.ld": "linkerscript",
+          "*.ld.in": "linkerscript"
+        }
       }
     }
   },
