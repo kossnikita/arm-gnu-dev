@@ -19,6 +19,7 @@ RUN apt update \
         ninja-build \
         python3 \
         python3-pip \
+        python3-yaml \
         wget \
         xz-utils \
         fonts-powerline \
@@ -30,12 +31,6 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/opt/arm-gnu-toolchain/bin:${PATH}"
-
-# Useful Python tools for debugging and flashing
-RUN pip3 install --no-cache-dir \
-        PyYAML \
-        pyocd \
-        west
 
 # Install Segger J-Link (deb package)
 RUN wget -O /tmp/${JLINK_DEB_NAME} ${JLINK_DEB_URL} \
