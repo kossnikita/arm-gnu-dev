@@ -21,6 +21,7 @@ RUN apt update \
         python3-pip \
         python3-yaml \
         wget \
+        curl \
         xz-utils \
         fonts-powerline \
     && wget -O /tmp/${ARM_GNU_TOOLCHAIN_ARCHIVE} ${ARM_GNU_TOOLCHAIN_URL} \
@@ -32,14 +33,25 @@ RUN apt update \
 
 ENV PATH="/opt/arm-gnu-toolchain/bin:${PATH}"
 
-# Install Segger J-Link (deb package)
-RUN wget -O /tmp/${JLINK_DEB_NAME} ${JLINK_DEB_URL} \
-    && dpkg -i /tmp/${JLINK_DEB_NAME} || true \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends -f \
-    && rm -f /tmp/${JLINK_DEB_NAME} \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Install Segger J-Link (deb package) using curl with resume+retries
+RUN set -eux; \
+    echo "Downloading ${JLINK_DEB_NAME} from ${JLINK_DEB_URL} with curl (resume + retries)"; \
+    for i in 1 2 3; do \
+        echo "curl POST attempt $i: accepting EULA and downloading"; \
+        curl -fL --retry 8 --retry-delay 5 --retry-max-time 60 \
+            --data "accept_license_agreement=accepted" \
+            --data "submit=Download+software" \
+            -o /tmp/${JLINK_DEB_NAME} \
+            ${JLINK_DEB_URL} && break || echo "curl POST attempt $i failed, retrying..."; \
+        sleep 3; \
+    done; \
+    if [ ! -f /tmp/${JLINK_DEB_NAME} ]; then echo "Failed to download ${JLINK_DEB_NAME} after retries" >&2; exit 1; fi; \
+    dpkg -i /tmp/${JLINK_DEB_NAME} || true; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends -f; \
+    rm -f /tmp/${JLINK_DEB_NAME}; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*
 
 # Configure zsh theme for the vscode user (keep zsh, switch theme to agnoster)
 RUN if [ -f /home/vscode/.zshrc ]; then \
