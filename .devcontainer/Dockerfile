@@ -70,8 +70,11 @@ RUN set -eux; \
     # Ensure the downloaded file is a deb and not an HTML page (EULA)
     if file /tmp/${JLINK_DEB_NAME} | grep -qi 'html\|text'; then echo "Downloaded ${JLINK_DEB_NAME} appears to be HTML (EULA page). Abort." >&2; exit 1; fi; \
     apt-get update; \
+    # Provide a no-op udevadm so the package post-install script can run inside a container
+    printf '#!/bin/sh\nexit 0' > /usr/bin/udevadm; chmod +x /usr/bin/udevadm; \
     # Use apt to install the .deb so dependencies are resolved automatically
     apt-get install -y --no-install-recommends /tmp/${JLINK_DEB_NAME}; \
+    rm -f /usr/bin/udevadm; \
     rm -f /tmp/${JLINK_DEB_NAME}; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
