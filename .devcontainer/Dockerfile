@@ -24,6 +24,27 @@ RUN apt update \
         curl \
         xz-utils \
         fonts-powerline \
+        libxrender1 \
+        libxcb-render0 \
+        libxcb-render-util0 \
+        libxcb-shape0 \
+        libxcb-randr0 \
+        libxcb-xfixes0 \
+        libxcb-sync1 \
+        libxcb-shm0 \
+        libxcb-icccm4 \
+        libxcb-keysyms1 \
+        libxcb-image0 \
+        libxkbcommon0 \
+        libxkbcommon-x11-0 \
+        libfontconfig1 \
+        libfreetype6 \
+        libxext6 \
+        libx11-6 \
+        libxcb1 \
+        libx11-xcb1 \
+        libsm6 \
+        libice6 \
     && wget -O /tmp/${ARM_GNU_TOOLCHAIN_ARCHIVE} ${ARM_GNU_TOOLCHAIN_URL} \
     && mkdir -p /opt/arm-gnu-toolchain \
     && tar -xJf /tmp/${ARM_GNU_TOOLCHAIN_ARCHIVE} -C /opt/arm-gnu-toolchain --strip-components=1 \
@@ -46,9 +67,11 @@ RUN set -eux; \
         sleep 3; \
     done; \
     if [ ! -f /tmp/${JLINK_DEB_NAME} ]; then echo "Failed to download ${JLINK_DEB_NAME} after retries" >&2; exit 1; fi; \
-    dpkg -i /tmp/${JLINK_DEB_NAME} || true; \
+    # Ensure the downloaded file is a deb and not an HTML page (EULA)
+    if file /tmp/${JLINK_DEB_NAME} | grep -qi 'html\|text'; then echo "Downloaded ${JLINK_DEB_NAME} appears to be HTML (EULA page). Abort." >&2; exit 1; fi; \
     apt-get update; \
-    apt-get install -y --no-install-recommends -f; \
+    # Use apt to install the .deb so dependencies are resolved automatically
+    apt-get install -y --no-install-recommends /tmp/${JLINK_DEB_NAME}; \
     rm -f /tmp/${JLINK_DEB_NAME}; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
