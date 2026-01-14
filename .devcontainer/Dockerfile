@@ -54,65 +54,13 @@ RUN apt update \
 
 ENV PATH="/opt/arm-gnu-toolchain/bin:${PATH}"
 
-# Install Docker & Docker Buildx for multi-architecture builds (DinD - Docker in Docker)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        gnupg \
-        lsb-release \
-    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
-    && echo \
-        "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-        $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        docker-ce-cli \
-        docker-buildx-plugin \
-        docker-compose-plugin \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install qemu-user-static for cross-architecture builds
+# Install qemu-user-static for cross-architecture builds (arm64, amd64)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         qemu-user-static \
         binfmt-support \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-# Create entrypoint script to wait for Docker socket from host
-RUN cat > /usr/local/bin/docker-entrypoint.sh << 'EOF'
-#!/bin/bash
-set -e
-
-# Wait for Docker socket to be available from host mount (optional)
-# This is used when running as devcontainer with Docker socket mounted
-if grep -q "docker" /proc/self/cgroup 2>/dev/null; then
-    echo "Waiting for Docker socket..."
-    for i in {1..30}; do
-        if [ -S /var/run/docker.sock ]; then
-            echo "✓ Docker socket is ready"
-            break
-        fi
-        echo "Waiting for Docker socket... ($i/30)"
-        sleep 1
-    done
-    
-    if [ ! -S /var/run/docker.sock ]; then
-        echo "Warning: Docker socket not available"
-    fi
-fi
-
-# Execute the command passed to the container
-exec "$@"
-EOF
-
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-
-# Set the entrypoint
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Segger J-Link (deb package) using curl with resume+retries
 RUN set -eux; \

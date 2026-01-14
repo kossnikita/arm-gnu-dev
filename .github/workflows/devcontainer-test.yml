@@ -51,14 +51,6 @@ jobs:
         run: |
           docker run --rm devcontainer-test:latest ninja --version
 
-      - name: Test Docker CLI
-        run: |
-          docker run --rm devcontainer-test:latest docker --version
-
-      - name: Test Docker Buildx
-        run: |
-          docker run --rm devcontainer-test:latest docker buildx version
-
       - name: Test QEMU (multi-arch support)
         run: |
           docker run --rm devcontainer-test:latest ls -la /usr/bin/qemu-aarch64-static
@@ -80,4 +72,8 @@ jobs:
         run: |
           devcontainer exec --workspace-folder . arm-none-eabi-gcc --version
           devcontainer exec --workspace-folder . cmake --version
+
+      - name: Test Docker inside devcontainer
+        run: |
           devcontainer exec --workspace-folder . docker --version
+          devcontainer exec --workspace-folder . docker buildx version
