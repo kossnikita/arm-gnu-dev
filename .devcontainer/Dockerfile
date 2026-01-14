@@ -68,26 +68,11 @@ RUN apt-get update \
         $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        docker-ce \
         docker-ce-cli \
-        containerd.io \
         docker-buildx-plugin \
         docker-compose-plugin \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && usermod -aG docker vscode
-
-# Configure Docker daemon for multi-architecture builds
-RUN mkdir -p /etc/docker \
-    && cat > /etc/docker/daemon.json << 'EOF'
-{
-    "log-driver": "json-file",
-    "log-opts": {
-        "max-size": "10m",
-        "max-file": "3"
-    }
-}
-EOF
+    && rm -rf /var/lib/apt/lists/*
 
 # Install qemu-user-static for cross-architecture builds
 RUN apt-get update \
@@ -97,25 +82,25 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create entrypoint script to auto-start dockerd
+# Create entrypoint script to wait for Docker socket from host
 RUN cat > /usr/local/bin/docker-entrypoint.sh << 'EOF'
 #!/bin/bash
 set -e
 
-# Start dockerd in the background if it's not already running
-if ! pgrep -x "dockerd" > /dev/null; then
-    echo "Starting Docker daemon..."
-    nohup dockerd > /var/log/docker.log 2>&1 &
-    
-    # Wait for Docker socket to be available
-    for i in {1..30}; do
-        if [ -S /var/run/docker.sock ]; then
-            echo "Docker daemon is ready"
-            break
-        fi
-        echo "Waiting for Docker daemon... ($i/30)"
-        sleep 1
-    done
+# Wait for Docker socket to be available from host mount
+echo "Waiting for Docker socket..."
+for i in {1..30}; do
+    if [ -S /var/run/docker.sock ]; then
+        echo "✓ Docker socket is ready"
+        break
+    fi
+    echo "Waiting for Docker socket... ($i/30)"
+    sleep 1
+done
+
+if [ ! -S /var/run/docker.sock ]; then
+    echo "Error: Docker socket not found after timeout"
+    exit 1
 fi
 
 # Execute the command passed to the container
