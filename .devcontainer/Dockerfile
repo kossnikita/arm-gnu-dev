@@ -121,7 +121,8 @@ fi
 # Execute the command passed to the container
 exec "$@"
 EOF
-chmod +x /usr/local/bin/docker-entrypoint.sh
+
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Set the entrypoint
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
