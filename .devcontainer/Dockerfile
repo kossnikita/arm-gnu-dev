@@ -97,17 +97,34 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create systemd service for Docker daemon auto-start
-RUN mkdir -p /etc/systemd/system/docker.service.d \
-    && cat > /etc/systemd/system/docker.service.d/override.conf << 'EOF'
-[Service]
-ExecStart=
-ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
-EOF
+# Create entrypoint script to auto-start dockerd
+RUN cat > /usr/local/bin/docker-entrypoint.sh << 'EOF'
+#!/bin/bash
+set -e
 
-# Enable Docker daemon to start automatically with systemd
-RUN systemctl enable docker 2>/dev/null || true \
-    && systemctl daemon-reload 2>/dev/null || true
+# Start dockerd in the background if it's not already running
+if ! pgrep -x "dockerd" > /dev/null; then
+    echo "Starting Docker daemon..."
+    nohup dockerd > /var/log/docker.log 2>&1 &
+    
+    # Wait for Docker socket to be available
+    for i in {1..30}; do
+        if [ -S /var/run/docker.sock ]; then
+            echo "Docker daemon is ready"
+            break
+        fi
+        echo "Waiting for Docker daemon... ($i/30)"
+        sleep 1
+    done
+fi
+
+# Execute the command passed to the container
+exec "$@"
+EOF
+chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Set the entrypoint
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Segger J-Link (deb package) using curl with resume+retries
 RUN set -eux; \

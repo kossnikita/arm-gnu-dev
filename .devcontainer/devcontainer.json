@@ -2,9 +2,7 @@
   "name": "ARM GNU Baremetal Dev",
   "image": "ghcr.io/kossnikita/arm-baremetal-devcontainer:latest",
   "remoteUser": "vscode",
-  "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
-  },
+  "privileged": true,
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
