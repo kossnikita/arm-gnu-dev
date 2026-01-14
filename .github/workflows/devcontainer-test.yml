@@ -1,0 +1,83 @@
+name: Test Dev Container
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - .devcontainer/**
+      - .github/workflows/devcontainer-test.yml
+  pull_request:
+    branches: ["main"]
+    paths:
+      - .devcontainer/**
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test devcontainer build and tools
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build devcontainer image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: .devcontainer/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: devcontainer-test:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test ARM toolchain
+        run: |
+          docker run --rm devcontainer-test:latest arm-none-eabi-gcc --version
+
+      - name: Test CMake
+        run: |
+          docker run --rm devcontainer-test:latest cmake --version
+
+      - name: Test Ninja
+        run: |
+          docker run --rm devcontainer-test:latest ninja --version
+
+      - name: Test Docker CLI
+        run: |
+          docker run --rm devcontainer-test:latest docker --version
+
+      - name: Test Docker Buildx
+        run: |
+          docker run --rm devcontainer-test:latest docker buildx version
+
+      - name: Test QEMU (multi-arch support)
+        run: |
+          docker run --rm devcontainer-test:latest ls -la /usr/bin/qemu-aarch64-static
+
+      - name: Test J-Link tools
+        run: |
+          docker run --rm devcontainer-test:latest JLinkExe --version || true
+
+      - name: Test devcontainer CLI
+        run: |
+          npm install -g @devcontainers/cli
+          devcontainer build --workspace-folder .
+
+      - name: Run devcontainer with features
+        run: |
+          devcontainer up --workspace-folder . --skip-post-attach
+
+      - name: Test tools inside devcontainer
+        run: |
+          devcontainer exec --workspace-folder . arm-none-eabi-gcc --version
+          devcontainer exec --workspace-folder . cmake --version
+          devcontainer exec --workspace-folder . docker --version
