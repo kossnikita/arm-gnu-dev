@@ -87,20 +87,22 @@ RUN cat > /usr/local/bin/docker-entrypoint.sh << 'EOF'
 #!/bin/bash
 set -e
 
-# Wait for Docker socket to be available from host mount
-echo "Waiting for Docker socket..."
-for i in {1..30}; do
-    if [ -S /var/run/docker.sock ]; then
-        echo "✓ Docker socket is ready"
-        break
+# Wait for Docker socket to be available from host mount (optional)
+# This is used when running as devcontainer with Docker socket mounted
+if grep -q "docker" /proc/self/cgroup 2>/dev/null; then
+    echo "Waiting for Docker socket..."
+    for i in {1..30}; do
+        if [ -S /var/run/docker.sock ]; then
+            echo "✓ Docker socket is ready"
+            break
+        fi
+        echo "Waiting for Docker socket... ($i/30)"
+        sleep 1
+    done
+    
+    if [ ! -S /var/run/docker.sock ]; then
+        echo "Warning: Docker socket not available"
     fi
-    echo "Waiting for Docker socket... ($i/30)"
-    sleep 1
-done
-
-if [ ! -S /var/run/docker.sock ]; then
-    echo "Error: Docker socket not found after timeout"
-    exit 1
 fi
 
 # Execute the command passed to the container
