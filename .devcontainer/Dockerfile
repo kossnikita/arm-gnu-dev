@@ -54,7 +54,62 @@ RUN apt update \
 
 ENV PATH="/opt/arm-gnu-toolchain/bin:${PATH}"
 
-# Install Segger J-Link (deb package) using curl with resume+retries
+# Install Docker & Docker Buildx for multi-architecture builds (DinD - Docker in Docker)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+    && echo \
+        "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+        $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-compose-plugin \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && usermod -aG docker vscode
+
+# Configure Docker daemon for multi-architecture builds
+RUN mkdir -p /etc/docker \
+    && cat > /etc/docker/daemon.json << 'EOF'
+{
+    "log-driver": "json-file",
+    "log-opts": {
+        "max-size": "10m",
+        "max-file": "3"
+    }
+}
+EOF
+
+# Install qemu-user-static for cross-architecture builds
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        qemu-user-static \
+        binfmt-support \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create systemd service for Docker daemon auto-start
+RUN mkdir -p /etc/systemd/system \
+    && cat > /etc/systemd/system/docker.service.d/override.conf << 'EOF'
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+EOF
+
+# Enable Docker daemon to start automatically with systemd
+RUN systemctl enable docker 2>/dev/null || true \
+    && systemctl daemon-reload 2>/dev/null || true
+
+# Segger J-Link (deb package) using curl with resume+retries
 RUN set -eux; \
     echo "Downloading ${JLINK_DEB_NAME} from ${JLINK_DEB_URL} with curl (resume + retries)"; \
     for i in 1 2 3; do \
@@ -78,13 +133,3 @@ RUN set -eux; \
     rm -f /tmp/${JLINK_DEB_NAME}; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
-
-# Configure zsh theme for the vscode user (keep zsh, switch theme to agnoster)
-RUN if [ -f /home/vscode/.zshrc ]; then \
-            if grep -q '^ZSH_THEME=' /home/vscode/.zshrc; then \
-                sed -i 's/^ZSH_THEME=.*/ZSH_THEME="agnoster"/' /home/vscode/.zshrc; \
-            else \
-                echo 'ZSH_THEME="agnoster"' >> /home/vscode/.zshrc; \
-            fi; \
-            chown vscode:vscode /home/vscode/.zshrc; \
-        fi

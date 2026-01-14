@@ -2,6 +2,12 @@
   "name": "ARM GNU Baremetal Dev",
   "image": "ghcr.io/kossnikita/arm-baremetal-devcontainer:latest",
   "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
@@ -22,5 +28,5 @@
       }
     }
   },
-  "postCreateCommand": "arm-none-eabi-gcc --version && cmake --version"
+  "postCreateCommand": "arm-none-eabi-gcc --version && cmake --version && docker --version && docker buildx version"
 }
