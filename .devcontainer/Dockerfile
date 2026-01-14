@@ -98,7 +98,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Create systemd service for Docker daemon auto-start
-RUN mkdir -p /etc/systemd/system \
+RUN mkdir -p /etc/systemd/system/docker.service.d \
     && cat > /etc/systemd/system/docker.service.d/override.conf << 'EOF'
 [Service]
 ExecStart=
